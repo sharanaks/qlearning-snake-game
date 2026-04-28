@@ -5,6 +5,10 @@ A Machine Learning based Snake Game AI developed using Reinforcement Learning (Q
 This project demonstrates how an AI agent learns optimal actions using rewards and penalties instead of fixed instructions.
 
 ---
+## 🚀 Live Website
+
+👉 https://sharanaks.github.io/qlearning-snake-game/
+
 
 # 📌 Project Overview
 
