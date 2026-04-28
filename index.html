@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake Swipe Game 🐍</title>
+  <style>
+    body {
+      text-align: center;
+      background: #eaffea;
+      font-family: Arial;
+    }
+
+    canvas {
+      background: #222;
+      margin-top: 10px;
+      border-radius: 10px;
+      touch-action: none;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: none;
+      background: #6fa8dc;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>🐍 Snake Game (Swipe Control)</h2>
+
+<div>
+  <button onclick="startGame()">Start</button>
+  <button onclick="restartGame()">Restart</button>
+  <button onclick="mode='HUMAN'">Human</button>
+  <button onclick="mode='AI'">AI</button>
+</div>
+
+<h3 id="score">Score: 0</h3>
+
+<canvas id="game" width="400" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const block = 20;
+
+let snake, direction, food, score;
+let running = false;
+let mode = "HUMAN";
+
+let Q = {};
+
+const actions = [
+  {x:0,y:-block},
+  {x:0,y:block},
+  {x:-block,y:0},
+  {x:block,y:0}
+];
+
+function init(){
+  snake = [{x:200,y:200}];
+  direction = {x:block,y:0};
+  food = randomFood();
+  score = 0;
+}
+
+function randomFood(){
+  return {
+    x: Math.floor(Math.random()*20)*block,
+    y: Math.floor(Math.random()*20)*block
+  };
+}
+
+function startGame(){
+  init();
+  running = true;
+}
+
+function restartGame(){
+  init();
+  running = true;
+}
+
+document.addEventListener("keydown", e=>{
+  if(mode==="HUMAN"){
+    if(e.key==="ArrowUp" && direction.y===0) direction={x:0,y:-block};
+    if(e.key==="ArrowDown" && direction.y===0) direction={x:0,y:block};
+    if(e.key==="ArrowLeft" && direction.x===0) direction={x:-block,y:0};
+    if(e.key==="ArrowRight" && direction.x===0) direction={x:block,y:0};
+  }
+});
+
+
+// 📱 SWIPE CONTROL
+let startX=0, startY=0;
+
+canvas.addEventListener("touchstart", e=>{
+  startX = e.touches[0].clientX;
+  startY = e.touches[0].clientY;
+});
+
+canvas.addEventListener("touchend", e=>{
+  let endX = e.changedTouches[0].clientX;
+  let endY = e.changedTouches[0].clientY;
+
+  let dx = endX - startX;
+  let dy = endY - startY;
+
+  if(Math.abs(dx) > Math.abs(dy)){
+    if(dx > 0 && direction.x===0) direction={x:block,y:0};   // right
+    else if(dx < 0 && direction.x===0) direction={x:-block,y:0}; // left
+  } else {
+    if(dy > 0 && direction.y===0) direction={x:0,y:block};   // down
+    else if(dy < 0 && direction.y===0) direction={x:0,y:-block}; // up
+  }
+});
+
+
+function getState(){
+  let head = snake[0];
+  return [
+    food.x > head.x,
+    food.x < head.x,
+    food.y > head.y,
+    food.y < head.y
+  ].join(",");
+}
+
+function chooseAction(state){
+  if(!Q[state]) Q[state] = [0,0,0,0];
+
+  if(Math.random() < 0.2){
+    return Math.floor(Math.random()*4);
+  }
+
+  return Q[state].indexOf(Math.max(...Q[state]));
+}
+
+function update(){
+  if(!running) return;
+
+  let state = getState();
+
+  if(mode==="AI"){
+    let action = chooseAction(state);
+    direction = actions[action];
+  }
+
+  let newHead = {
+    x: snake[0].x + direction.x,
+    y: snake[0].y + direction.y
+  };
+
+  let reward = -0.1;
+
+  // 🚨 collision → RESET instantly
+  if(newHead.x<0||newHead.y<0||newHead.x>=400||newHead.y>=400||
+     snake.some(s=>s.x===newHead.x&&s.y===newHead.y)){
+    
+    reward = -10;
+    running = false;
+    return;
+  }
+
+  snake.unshift(newHead);
+
+  if(newHead.x===food.x && newHead.y===food.y){
+    score++;
+    reward = 10;
+    food = randomFood();
+  } else {
+    snake.pop();
+  }
+
+  let nextState = getState();
+
+  if(!Q[state]) Q[state]=[0,0,0,0];
+  if(!Q[nextState]) Q[nextState]=[0,0,0,0];
+
+  let actionIndex = actions.findIndex(a=>a.x===direction.x && a.y===direction.y);
+
+  Q[state][actionIndex] += 0.1 * (
+    reward + 0.9*Math.max(...Q[nextState]) - Q[state][actionIndex]
+  );
+
+  document.getElementById("score").innerText = "Score: " + score;
+}
+
+function draw(){
+  ctx.fillStyle="#222";
+  ctx.fillRect(0,0,400,400);
+
+  snake.forEach((s,i)=>{
+    ctx.fillStyle = i===0 ? "#00ffcc" : "lime";
+    ctx.fillRect(s.x,s.y,block,block);
+  });
+
+  ctx.fillStyle="red";
+  ctx.beginPath();
+  ctx.arc(food.x+block/2, food.y+block/2, block/2-2, 0, Math.PI*2);
+  ctx.fill();
+}
+
+function loop(){
+  update();
+  draw();
+}
+
+setInterval(loop, 100);
+</script>
+
+</body>
+</html>
